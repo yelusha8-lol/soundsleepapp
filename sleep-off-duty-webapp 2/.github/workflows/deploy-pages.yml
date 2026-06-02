@@ -1,0 +1,78 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+      
+      - name: Install pnpm
+        run: npm install -g pnpm@10.4.1
+      
+      - name: Install Dependencies
+        working-directory: sleep-off-duty-webapp\ 2
+        run: pnpm install --frozen-lockfile
+      
+      - name: Type Check
+        working-directory: sleep-off-duty-webapp\ 2
+        run: pnpm run check
+      
+      - name: Build App
+        working-directory: sleep-off-duty-webapp\ 2
+        run: pnpm run build
+      
+      - name: Verify Audio Files
+        working-directory: sleep-off-duty-webapp\ 2
+        run: |
+          echo "Checking for audio assets..."
+          if [ -d "dist/audio" ]; then
+            echo "✓ Audio directory exists in dist/"
+            ls -lh dist/audio/ || echo "Audio files present"
+          else
+            echo "⚠ Note: Audio files not in dist (they're in public/)"
+          fi
+          echo "Total dist size:"
+          du -sh dist/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Upload Build Artifacts
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: 'sleep-off-duty-webapp 2/dist'
+      
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
