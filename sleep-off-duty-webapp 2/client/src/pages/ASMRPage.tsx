@@ -38,8 +38,8 @@ export default function ASMRPage() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [showTimerPicker, setShowTimerPicker] = useState(false);
   const [audioMode, setAudioMode] = useState<'sample' | 'full'>('sample'); // 切换本地MP3和YouTube
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
   const categoryScrollRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 定时器逻辑
@@ -52,7 +52,6 @@ export default function ASMRPage() {
             clearInterval(timerRef.current!);
             setPlayingSource(null);
             setTimerMinutes(null);
-            if (audioRef.current) audioRef.current.pause();
             return null;
           }
           return prev - 1;
@@ -85,11 +84,8 @@ export default function ASMRPage() {
   };
 
   const handlePlayAudio = (source: AudioSource) => {
-    setPlayingSource(source);
-    if (source.type === 'mp3' && audioRef.current) {
-      audioRef.current.src = source.source;
-      audioRef.current.play();
-    }
+    setPlaybackError(null);
+    setPlayingSource((current) => current?.id === source.id ? null : source);
   };
 
   // 合并样本和视频为统一列表
@@ -115,17 +111,6 @@ export default function ASMRPage() {
         position: "relative",
       }}
     >
-      {/* ── 隐藏的音频播放器 ── */}
-      <audio
-        ref={audioRef}
-        onEnded={() => {
-          setPlayingSource(null);
-          setTimerMinutes(null);
-          setTimeLeft(null);
-          if (timerRef.current) clearInterval(timerRef.current);
-        }}
-      />
-
       {/* ── 顶部导航栏 ── */}
       <div
         style={{
@@ -469,19 +454,32 @@ export default function ASMRPage() {
           >
             {/* YouTube 播放器（仅在视频模式） */}
             {playingSource.type === 'youtube' && (
-              <div style={{ width: "100%", aspectRatio: "16/9" }}>
-                <iframe
-                  key={playingSource.id}
-                  src={`https://www.youtube.com/embed/${playingSource.source}?autoplay=1&rel=0&modestbranding=1`}
-                  allow="autoplay; encrypted-media"
-                  allowFullScreen
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    border: "none",
-                    borderRadius: "0",
-                  }}
-                />
+              <div>
+                <div style={{ width: "100%", aspectRatio: "16/9" }}>
+                  <iframe
+                    key={playingSource.id}
+                    src={`https://www.youtube.com/embed/${playingSource.source}?autoplay=1&playsinline=1&rel=0&modestbranding=1&origin=${encodeURIComponent(window.location.origin)}`}
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      border: "none",
+                      borderRadius: "0",
+                    }}
+                  />
+                </div>
+                <div style={{ padding: "10px 16px 0", fontSize: 11, color: "#AEB7CC", lineHeight: 1.5 }}>
+                  如果 YouTube 没有自动播放，请在播放器中点播放，或{" "}
+                  <a
+                    href={`https://www.youtube.com/watch?v=${playingSource.source}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: "#C9A66B", textDecoration: "none" }}
+                  >
+                    打开 YouTube
+                  </a>
+                </div>
               </div>
             )}
 
@@ -491,13 +489,24 @@ export default function ASMRPage() {
                 <audio
                   controls
                   autoPlay
+                  src={playingSource.source}
+                  onEnded={() => {
+                    setPlayingSource(null);
+                    setTimerMinutes(null);
+                    setTimeLeft(null);
+                    if (timerRef.current) clearInterval(timerRef.current);
+                  }}
+                  onError={() => setPlaybackError("音频文件未找到，请稍后刷新重试。")}
                   style={{
                     width: "100%",
                     height: 40,
                   }}
-                >
-                  <source src={playingSource.source} type="audio/mpeg" />
-                </audio>
+                />
+                {playbackError && (
+                  <div style={{ marginTop: 8, color: "#ffb4a8", fontSize: 11, lineHeight: 1.5 }}>
+                    {playbackError}
+                  </div>
+                )}
               </div>
             )}
 
@@ -547,7 +556,6 @@ export default function ASMRPage() {
                   setTimerMinutes(null);
                   setTimeLeft(null);
                   if (timerRef.current) clearInterval(timerRef.current);
-                  if (audioRef.current) audioRef.current.pause();
                 }}
                 style={{
                   background: "rgba(255,255,255,0.08)",

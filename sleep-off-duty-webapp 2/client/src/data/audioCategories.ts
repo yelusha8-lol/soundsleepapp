@@ -22,8 +22,9 @@ export interface AudioCategory {
   videos: AudioItem[]; // YouTube videos for extended listening
 }
 
-// MP3 file paths (relative to public folder)
-const MP3_BASE = '/audio/';
+// MP3 file paths served from Vite public assets.
+// GitHub Pages hosts this app under /soundsleepapp/, so use Vite's base URL.
+const MP3_BASE = `${import.meta.env.BASE_URL}audio/`;
 
 export const AUDIO_CATEGORIES: AudioCategory[] = [
   {
