@@ -88,6 +88,24 @@ export default function ASMRPage() {
     setPlayingSource((current) => current?.id === source.id ? null : source);
   };
 
+  const handleSelectCategory = (category: typeof activeCategory) => {
+    setActiveCategory(category);
+    setPlaybackError(null);
+    setTimerMinutes(null);
+    setTimeLeft(null);
+    if (timerRef.current) clearInterval(timerRef.current);
+    setPlayingSource(audioMode === 'full' ? category.videos[0] ?? null : null);
+  };
+
+  const handleSelectMode = (mode: 'sample' | 'full') => {
+    setAudioMode(mode);
+    setPlaybackError(null);
+    setTimerMinutes(null);
+    setTimeLeft(null);
+    if (timerRef.current) clearInterval(timerRef.current);
+    setPlayingSource(mode === 'full' ? activeCategory.videos[0] ?? null : null);
+  };
+
   // 合并样本和视频为统一列表
   const getCombinedAudioList = () => {
     if (audioMode === 'sample') {
@@ -98,6 +116,9 @@ export default function ASMRPage() {
   };
 
   const audioList = getCombinedAudioList();
+  const contentBottomPadding = playingSource
+    ? playingSource.type === 'youtube' ? 360 : 210
+    : 24;
 
   return (
     <div
@@ -185,7 +206,7 @@ export default function ASMRPage() {
         {AUDIO_CATEGORIES.map((cat) => (
           <button
             key={cat.id}
-            onClick={() => setActiveCategory(cat)}
+            onClick={() => handleSelectCategory(cat)}
             style={{
               flexShrink: 0,
               padding: "8px 14px",
@@ -260,7 +281,7 @@ export default function ASMRPage() {
           {/* ── 模式切换按钮 ── */}
           <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
             <button
-              onClick={() => setAudioMode('sample')}
+              onClick={() => handleSelectMode('sample')}
               style={{
                 flex: 1,
                 padding: "10px 16px",
@@ -284,7 +305,7 @@ export default function ASMRPage() {
               本地试听
             </button>
             <button
-              onClick={() => setAudioMode('full')}
+              onClick={() => handleSelectMode('full')}
               style={{
                 flex: 1,
                 padding: "10px 16px",
@@ -309,7 +330,7 @@ export default function ASMRPage() {
           </div>
 
           {/* ── 音频列表 ── */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: playingSource ? 120 : 24 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: contentBottomPadding }}>
             {audioList.map((audio, index) => (
               <motion.div
                 key={audio.id}
@@ -442,14 +463,17 @@ export default function ASMRPage() {
             style={{
               position: "fixed",
               bottom: 0,
-              left: "50%",
-              transform: "translateX(-50%)",
+              left: 0,
+              right: 0,
+              margin: "0 auto",
               width: "100%",
               maxWidth: 430,
               zIndex: 100,
               background: "rgba(13,27,42,0.98)",
               backdropFilter: "blur(20px)",
               borderTop: "1px solid rgba(201,166,107,0.2)",
+              paddingBottom: "env(safe-area-inset-bottom)",
+              boxSizing: "border-box",
             }}
           >
             {/* YouTube 播放器（仅在视频模式） */}
@@ -457,8 +481,8 @@ export default function ASMRPage() {
               <div>
                 <div style={{ width: "100%", aspectRatio: "16/9" }}>
                   <iframe
-                    key={playingSource.id}
-                    src={`https://www.youtube.com/embed/${playingSource.source}?autoplay=1&playsinline=1&rel=0&modestbranding=1&origin=${encodeURIComponent(window.location.origin)}`}
+                    key={playingSource.source}
+                    src={`https://www.youtube.com/embed/${playingSource.source}?autoplay=1&playsinline=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
                     allow="autoplay; encrypted-media; picture-in-picture"
                     allowFullScreen
                     style={{
